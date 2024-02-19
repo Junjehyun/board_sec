@@ -1,0 +1,187 @@
+2월 17일 스피드 복습 다시 만들어보기 
+
+1. laravel_sec_board 폴더 생성
+
+2. vs코드실행 -> 폴더 켜서 시작 
+
+3. 프로젝트 설정 (php및 composer, 익스텐션들은 다 설치되있으므로 생략.)
+
+    composer create-project --prefer-dist laravel/laravel second_board
+
+4. 버전확인 -> php (8.2.15), composer (2.6.6), laravel (10)
+
+5. 프로젝트 생성 다 됨 -> env가서 데이터베이스 연결 정보 설정하기. env로 이동
+
+    -----------------------------
+    | DB_CONNECTION=mysql       |
+    | DB_HOST=127.0.0.1         |   
+    | DB_PORT=3306              |
+    | DB_DATABASE=laravel_sec   |
+    | DB_USERNAME=root          |
+    | DB_PASSWORD=              |
+    -----------------------------
+
+6. 마이그레이션 생성 : php artisan make:migration create_boards_table
+    생성 후 database\migrations에 2024_02_17_092602_create_boards_table.php 확인
+
+7. 마이그레이션 실행 : php artisan migrate
+
+8. 모델과 컨트롤러 생성 ! 
+    php artisan make:model board
+    php artisan make:controller BoardController
+
+9. 모델과 컨트롤러 확인해보자. 
+    모델 : App\Models\Board.php
+    컨트롤러 : App\Http\Controllers\BoardController.php
+
+10. 중간개념잡기 
+모델이란 어플리케이션의 데이터 구조를 정의하고, 데이터베이스와 상호작용한다.
+데이터의 CRUD 메서드를 제공하며, 데이터의 영구적인 상태관리를 한다. 
+일반적으로 Eloquent ORM을 사용하여 데이터베이스와 상호작용한다. 
+
+컨트롤러란 HTTP 요청을 처리하고 사용자에게 적절한 응답을 반환한다.
+클라이언트의 요청에 따라 모델을 사용하여 데이터를 검색하거나, 조작하고, 이를 뷰로 전달.
+라우팅에 의해 호출되며 요청을 수신하여 모델과 뷰를 조정하여 데이터를 처리하고 뷰로 반환함.
+
+11. routes/web.php에 가서 게시판과 관련된 라우트를 설정하기! 
+-> 메인페이지, 작성페이지, 저장 기능, 보기 기능, 수정 페이지, 수정 기능, 삭제 기능 
+까지 총 7개 라우트 설정 .. 일단 급하니까 나중에 다시 추가하거나 기능 보강한다.
+--------- 코딩은 여기까지만, 나중에 다시 재개 지금은 빠른 복습만---------
+12. 뷰 파일을 생성(작성X)해야한다. 오늘은 복습차원이니 저번이랑 똑같이 꾸며본다. 
+resources/views 밑에 
+index.blade.php (메인페이지)
+create.blade.php (작성페이지)
+edit.blade.php (수정페이지)
+show.blade.php (상세보기 페이지)
+
+그리고 헤더랑 푸터 잡아주는 공통페이지인 레이아웃을 설정해야하니 
+resources/views/layouts폴더 밑에 -> app.blade.php 페이지 생성한다.
+
+13. 마이그레이션 파일 수정하기 
+database/migrations 폴더에 생성된 마이그레이션 파일을 열어 'boards' 테이블의
+구조를 정의하자. 
+
+ Schema::create('boards', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('content');
+            $table->timestamps();
+        });
+
+14. 컨트롤러 로직 설정! 여기가 CRUD의 핵심이다 ! 
+
+class BoardsController extends Controller
+{
+    // 모든 게시물을 가져와서 목록 페이지를 표시하는 메서드
+    public function index()
+    {
+        // 최신 게시글을 10개씩 페이지네이션하여 가져온다.
+        // latest = order by created_at desc와 같다!
+        $boards = Board::latest()->paginate(10); 
+
+        // boards.index 뷰를 반환하고, 게시물 데이터를 함께 전달
+        return view('boards.index', compact('boards')); 
+    }
+
+    // 게시글 작성 페이지
+    public function create() {
+        return view('boards.create');
+    }
+
+    // 게시글 저장하는 메서드 
+    public function store(Request $request) {
+
+        // 사용자로부터 입력받은 데이터를 유효성 검사함.
+        $request->validate([
+            'title' => 'required|max:255',
+            'content' => 'required',
+        ]);
+
+     // 게시글 생성
+    $board = new Board();
+    $board->title = $request->input('title');
+    $board->content = $request->input('content');
+    $board->save();
+
+        // 성공 메시지와 함께 게시글 목록 페이지로 리다이렉션
+    return redirect()->route('boards.index')->with('success', '게시글이 작성되었습니다.');
+
+    }
+
+        // 게시글 상세보기
+    public function show(Board $board) {
+        return view('boards.show', compact('board'));
+    }
+
+    // 게시글 수정 페이지
+    public function edit(Board $board) {
+        return view('boards.edit', compact('board'));
+    }
+
+    // 게시글 수정
+    public function update(Request $request, Board $board) {
+        //유효성 검사
+        $validatedData = $request->validate([
+            'title' => 'required|max:255',
+            'content' => 'required',
+        ]);
+
+        // 게시글 모델을 사용하여 데이터베이스의 해당 게시글을 업데이트
+        $board->update($validatedData);
+
+        // 성공 메시지와 함께 게시글 목록 페이지로 리다이렉션
+        return redirect()->route('boards.index')->with('success', '게시글이 수정되었습니다.');
+    }
+
+    // 게시글 삭제
+    public function delete(Board $board) {
+        // 해당 게시글을 데이터베이스에서 삭제한다.
+        $board->delete();
+
+        // 성공 메시지와 함께 게시글 목록 페이지로 리다이렉션.
+        return redirect()->route('boards.index')->with('success','게시글이 삭제 되었습니다.');
+    }
+
+}
+
+15. 뷰 파일 작성 
+
+index.blade.php (메인페이지)
+create.blade.php (작성페이지)
+edit.blade.php (수정페이지)
+show.blade.php (상세보기 페이지)
+
+이건 추후에 다시 한다. 실제 코딩할때 layouts폴더에 app.blade.php에 nav, footer 잡아두고 
+body태그만 페이지 역할에 따라 코딩한다. 
+
+그리고 컨트롤러에 검증규칙 좀 더 강화하자. save할때 
+
+$validateData = $request->validate([
+    // 제목은 255자 까지 제한
+    'title' => 'reqired|max:255,
+    // 내용물은 최소 5글자 이상 이런식으로...
+    'content' => 'required|min:5,
+]);
+
+16. 모델 fillable 필드 정의 할것
+
+그리고 이번에는 세션메세지를 넣지 못했다. 공부하다가 알게 된것인데, 
+index.blade.php에다가 
+
+@if (session('success'))
+    <div class="alert alert-success">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
+
+이것 꼭 넣자. 그리고 댓글 기능도 추가 할것 
+Comment 모델과 comments 테이블을 생성하고, 게시글과 댓글간의 관계를 설정할것. 
+
+이미지 업로드 기능도 
+
