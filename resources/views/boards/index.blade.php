@@ -4,7 +4,7 @@
 @section('content')
 <!-- mb-5를 넣어주면서 요소의 아래쪽에 마진이 추가되어 여백이 생기게 됨. 가독성을 위해. -->
 <div class="container text-center mb-5">
-    <h2 class="mb-5">게시판</h2>
+    <h2 class="mb-5">나의 블로그</h2>
 </div>
 
 @php

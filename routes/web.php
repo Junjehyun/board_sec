@@ -1,5 +1,5 @@
 <?php
-
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BoardController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +59,8 @@ Route::put('/boards/{board}', [BoardController::class, 'update'])->name('boards.
 // 라는 이름이 지정되어 있어 나중에 이름을 이용하여 url을 생성할 수 있다.
 Route::delete('/boards/{board}', [BoardController::class, 'delete'])->name('boards.delete');
 
+// Jetstream Sanctum을 사용해서 사용자를 인증하고, 라우트 그룹에 미들웨어로 지정된
+// auth:sanctum과 verified를 사용하여 인증 및 이메일 인증을 처리한다.
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
@@ -68,3 +70,7 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 });
+
+
+// 로그인 페이지에 대한 라우트
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
